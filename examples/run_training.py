@@ -20,12 +20,13 @@ from drlfoam.execution import LocalBuffer, SlurmBuffer, SlurmConfig
 
 logging.basicConfig(level=logging.INFO)
 
+
 SIMULATION_ENVIRONMENTS = {
     "rotatingCylinder2D" : RotatingCylinder2D,
     "rotatingPinball2D" : RotatingPinball2D
 }
 
-DEFAULT_NETWORKS = {
+DEFAULT_CONFIG = {
     "rotatingCylinder2D" : {
         "policy_dict" : {
             "n_layers": 2,
@@ -48,7 +49,9 @@ DEFAULT_NETWORKS = {
             "n_layers": 2,
             "n_neurons": 512,
             "activation": pt.nn.functional.relu
-        }
+        },
+        "policy_lr" : 4.0e-4,
+        "value_lr" : 4.0e-4
     }
 }
 
@@ -119,8 +122,9 @@ def main(args):
     elif executer == "slurm":
         # Typical Slurm configs for TU Braunschweig cluster
         config = SlurmConfig(
-            n_tasks=env.mpi_ranks, n_nodes=1, partition="standard", time="02:00:00",
-            modules=["singularity/latest", "mpi/openmpi/4.1.1/gcc"]
+            n_tasks=env.mpi_ranks, n_nodes=1, partition="queue-1", time="03:00:00",
+            constraint="c5a.24xlarge", modules=["openmpi/4.1.5"],
+            commands_pre=["source /fsx/OpenFOAM/OpenFOAM-v2206/etc/bashrc", "source /fsx/drlfoam_main/setup-env"]
         )
         buffer = SlurmBuffer(training_path, env,
                              buffer_size, n_runners, config, timeout=timeout)
@@ -130,7 +134,7 @@ def main(args):
 
     # create PPO agent
     agent = PPOAgent(env.n_states, env.n_actions, -env.action_bounds, env.action_bounds,
-                     **DEFAULT_NETWORKS[simulation])
+                     **DEFAULT_CONFIG[simulation])
 
     # load checkpoint if provided
     if checkpoint_file:
