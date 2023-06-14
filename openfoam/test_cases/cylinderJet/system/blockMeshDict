@@ -1,0 +1,229 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      blockMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+lengthX 2.2;
+lengthY 0.41;
+blocksX 200;
+blocksY #calc "(int) ($lengthY / $lengthX * $blocksX)";
+thickness #calc "$lengthX / $blocksX";
+
+jetAngle 3;
+
+mshAngle 45;
+
+scale   1;
+
+domain
+{
+    P    0.2;
+    Q    0.21;
+    R    0.05;
+    Ox   0.2;
+    Oy   0.2;
+    
+    jet   #eval "degToRad($jetAngle)";
+    msh   #eval "degToRad($mshAngle)";
+
+
+    xl1o  #eval "$Ox + ($P * tan($jet))";      //
+    xl2o  #eval "$Ox - ($P * tan($jet))";      //
+    
+    xu1o  #eval "$Ox + ($Q * tan($jet))";      //
+    xu2o  #eval "$Ox - ($Q * tan($jet))";      //
+
+    xAo   #eval "$Ox + ($P * tan($msh))";      //
+    xDo   #eval "$xAo + 0";      //
+    
+    xA    #eval "$Ox + ($R * sin($msh))";      //
+    yA    #eval "$Oy - ($R * cos($msh))";      //
+    xB    #eval "$Ox - ($R * sin($msh))";      //
+    yB    #eval "$Oy - ($R * cos($msh))";      //
+    xC    #eval "$Ox - ($R * sin($msh))";      //
+    yC    #eval "$Oy + ($R * cos($msh))";      //
+    xD    #eval "$Ox + ($R * sin($msh))";      //
+    yD    #eval "$Oy + ($R * cos($msh))";      //
+       
+    xl1   #eval "$Ox + ($R * sin($jet))";      //
+    yl1   #eval "$Oy - ($R * cos($jet))";      //
+    xl2   #eval "$Ox - ($R * sin($jet))";      //
+    yl2   #eval "$Oy - ($R * cos($jet))";      //
+  
+    xu1   #eval "$Ox + ($R * sin($jet))";      //
+    yu1   #eval "$Oy + ($R * cos($jet))";      //
+    xu2   #eval "$Ox - ($R * sin($jet))";      //
+    yu2   #eval "$Oy + ($R * cos($jet))";      //
+    
+}
+
+
+geometry
+{
+    cylinder
+    {
+        type    searchableCylinder;
+        point1  (0.2 0.2 -0.12);
+        point2  (0.2 0.2 0.12);
+        radius  0.05;
+    }
+}
+
+vertices
+(
+    (0 0 0)                                                //0
+    ($domain.xl2o 0 0)                                     //1
+    ($domain.xl1o 0 0)                                     //2
+    ($domain.xAo 0 0)                                      //3
+    ($lengthX 0 0)                                         //4
+    ($lengthX $lengthY 0)                                  //5
+    ($domain.xDo $lengthY 0)                               //6
+    ($domain.xu1o $lengthY 0)                              //7
+    ($domain.xu2o $lengthY 0)                              //8
+    (0 $lengthY 0)                                         //9 
+    project ($domain.xB $domain.yB 0) (cylinder)           //10	
+    project ($domain.xl2 $domain.yl2 0) (cylinder)         //11
+    project ($domain.xl1 $domain.yl1 0) (cylinder)         //12
+    project ($domain.xA $domain.yA 0) (cylinder)           //13
+    project ($domain.xD $domain.yD 0) (cylinder)           //14
+    project ($domain.xu1 $domain.yu1 0) (cylinder)         //15
+    project ($domain.xu2 $domain.yu2 0) (cylinder)         //16
+    project ($domain.xC $domain.yC 0) (cylinder)           //17
+     
+    (0 0 $thickness)                                            //18
+    ($domain.xl2o 0 $thickness)                                 //19
+    ($domain.xl1o 0 $thickness)                                 //20
+    ($domain.xAo 0 $thickness)                                  //21
+    ($lengthX 0 $thickness)                                     //22
+    ($lengthX $lengthY $thickness)                              //23
+    ($domain.xDo $lengthY $thickness)                           //24
+    ($domain.xu1o $lengthY $thickness)                          //25
+    ($domain.xu2o $lengthY $thickness)                          //26
+    (0 $lengthY $thickness)                                     //27
+    project ($domain.xB $domain.yB $thickness) (cylinder)       //28	
+    project ($domain.xl2 $domain.yl2 $thickness) (cylinder)     //29
+    project ($domain.xl1 $domain.yl1 $thickness) (cylinder)     //30
+    project ($domain.xA $domain.yA $thickness) (cylinder)       //31
+    project ($domain.xD $domain.yD $thickness) (cylinder)       //32
+    project ($domain.xu1 $domain.yu1 $thickness) (cylinder)     //33
+    project ($domain.xu2 $domain.yu2 $thickness) (cylinder)     //34
+    project ($domain.xC $domain.yC $thickness) (cylinder)       //35
+);
+
+blocks
+(
+    hex (0 1 11 10 18 19 29 28) (20 20 1) simpleGrading (1 1 1)
+    
+    hex (1 2 12 11 19 20 30 29) (20 20 1) simpleGrading (1 1 1)
+    
+    hex (2 3 13 12 20 21 31 30) (20 20 1) simpleGrading (1 1 1)
+    
+    hex (3 4 5 6 21 22 23 24) (20 20 1) simpleGrading (1 1 1)
+    
+    hex (3 6 14 13 21 24 32 31) (20 20 1) simpleGrading (1 1 1)
+    
+    hex (0 10 17 9 18 28 35 27) (20 20 1) simpleGrading (1 1 1)
+    
+    hex (9 17 16 8 27 35 34 26) (20 20 1) simpleGrading (1 1 1)
+    
+    hex (7 8 16 15 25 26 34 33) (20 20 1) simpleGrading (1 1 1)
+    
+    hex (6 7 15 14 24 25 33 32) (20 20 1) simpleGrading (1 1 1)
+);
+
+edges
+(
+    project 12 13 (cylinder)          // 
+    project 30 31 (cylinder)          // 
+    
+    project 13 14 (cylinder)          // 
+    project 31 32 (cylinder)          // 
+
+    project 14 15 (cylinder)          // 
+    project 32 33 (cylinder)          // 
+
+    project 15 16 (cylinder)          // 
+    project 33 34 (cylinder)          // 
+
+    project 16 17 (cylinder)          // 
+    project 34 35 (cylinder)          // 
+    
+    project 17 10 (cylinder)          // 
+    project 35 28 (cylinder)          // 
+    
+    project 10 11 (cylinder)          // 
+    project 28 29 (cylinder)          // 
+    
+    project 11 12 (cylinder)          // 
+    project 29 30 (cylinder)          // 
+    
+);
+
+boundary
+(
+    /*top
+    {
+        type patch;
+        faces
+        (
+            (3 7 6 2)
+        );
+    }
+    bottom
+    {
+        type patch;
+        faces
+        (
+            (1 5 4 0)
+        );
+    }
+    inlet
+    {
+        type patch;
+        faces
+        (
+            (0 4 7 3)
+        );
+    }
+    outlet
+    {
+        type patch;
+        faces
+        (
+            (2 6 5 1)
+        );
+    }
+    back
+    {
+        type empty;
+        faces
+        (
+            (0 3 2 1)
+        );
+    }
+    front
+    {
+        type empty;
+        faces
+        (
+            (4 5 6 7)
+        );
+    }*/
+);
+
+mergePatchPairs
+(
+);
+
+// ************************************************************************* //
