@@ -16,9 +16,12 @@ FoamFile
 
 lengthX 2.2;
 lengthY 0.41;
-blocksX 200;
-blocksY #calc "(int) ($lengthY / $lengthX * $blocksX)";
-thickness #calc "$lengthX / $blocksX";
+
+thickness 0.01; //#calc "$lengthX / $blocksX";
+Ox   0.2;
+Oy   0.2;
+blocks 40;
+blocks2 #eval{ round((($lengthX-$Ox * 2)) / ($Ox * 2) * $blocks)};
 
 jetAngle 3;
 
@@ -26,47 +29,41 @@ mshAngle 45;
 
 scale   1;
 
-domain
-{
-    P    0.2;
-    Q    0.21;
-    R    0.05;
-    Ox   0.2;
-    Oy   0.2;
-    
-    jet   #eval "degToRad($jetAngle)";
-    msh   #eval "degToRad($mshAngle)";
-
-
-    xl1o  #eval "$Ox + ($P * tan($jet))";      //
-    xl2o  #eval "$Ox - ($P * tan($jet))";      //
-    
-    xu1o  #eval "$Ox + ($Q * tan($jet))";      //
-    xu2o  #eval "$Ox - ($Q * tan($jet))";      //
-
-    xAo   #eval "$Ox + ($P * tan($msh))";      //
-    xDo   #eval "$xAo + 0";      //
-    
-    xA    #eval "$Ox + ($R * sin($msh))";      //
-    yA    #eval "$Oy - ($R * cos($msh))";      //
-    xB    #eval "$Ox - ($R * sin($msh))";      //
-    yB    #eval "$Oy - ($R * cos($msh))";      //
-    xC    #eval "$Ox - ($R * sin($msh))";      //
-    yC    #eval "$Oy + ($R * cos($msh))";      //
-    xD    #eval "$Ox + ($R * sin($msh))";      //
-    yD    #eval "$Oy + ($R * cos($msh))";      //
-       
-    xl1   #eval "$Ox + ($R * sin($jet))";      //
-    yl1   #eval "$Oy - ($R * cos($jet))";      //
-    xl2   #eval "$Ox - ($R * sin($jet))";      //
-    yl2   #eval "$Oy - ($R * cos($jet))";      //
+// points on cylinder (circle)
+P    0.2;
+Q    0.21;
+R    0.05;
   
-    xu1   #eval "$Ox + ($R * sin($jet))";      //
-    yu1   #eval "$Oy + ($R * cos($jet))";      //
-    xu2   #eval "$Ox - ($R * sin($jet))";      //
-    yu2   #eval "$Oy + ($R * cos($jet))";      //
-    
-}
+jet   #eval "degToRad($jetAngle)";
+msh   #eval "degToRad($mshAngle)";
+
+xl1o  #eval "$Ox + ($P * tan($jet))";      //
+xl2o  #eval "$Ox - ($P * tan($jet))";      //
+   
+xu1o  #eval "$Ox + ($Q * tan($jet))";      //
+xu2o  #eval "$Ox - ($Q * tan($jet))";      //
+
+xAo   #eval "$Ox + ($P * tan($msh))";      
+xDo   #eval "$xAo + 0";      //
+   
+xA    #eval "$Ox + ($R * sin($msh))";      //
+yA    #eval "$Oy - ($R * cos($msh))";      //
+xB    #eval "$Ox - ($R * sin($msh))";      //
+yB    #eval "$Oy - ($R * cos($msh))";      //
+xC    #eval "$Ox - ($R * sin($msh))";      //
+yC    #eval "$Oy + ($R * cos($msh))";      //
+xD    #eval "$Ox + ($R * sin($msh))";      //
+yD    #eval "$Oy + ($R * cos($msh))";      //
+       
+xl1   #eval "$Ox + ($R * sin($jet))";      //
+yl1   #eval "$Oy - ($R * cos($jet))";      //
+xl2   #eval "$Ox - ($R * sin($jet))";      //
+yl2   #eval "$Oy - ($R * cos($jet))";      //
+  
+xu1   #eval "$Ox + ($R * sin($jet))";      //
+yu1   #eval "$Oy + ($R * cos($jet))";      //
+xu2   #eval "$Ox - ($R * sin($jet))";      //
+yu2   #eval "$Oy + ($R * cos($jet))";      //
 
 
 geometry
@@ -74,72 +71,83 @@ geometry
     cylinder
     {
         type    searchableCylinder;
-        point1  (0.2 0.2 -0.12);
-        point2  (0.2 0.2 0.12);
+        point1  ($Ox $Oy -0.12);
+        point2  ($Ox $Oy 0.12);
         radius  0.05;
     }
 }
 
-vertices
-(
-    (0 0 0)                                                //0
-    ($domain.xl2o 0 0)                                     //1
-    ($domain.xl1o 0 0)                                     //2
-    ($domain.xAo 0 0)                                      //3
-    ($lengthX 0 0)                                         //4
-    ($lengthX $lengthY 0)                                  //5
-    ($domain.xDo $lengthY 0)                               //6
-    ($domain.xu1o $lengthY 0)                              //7
-    ($domain.xu2o $lengthY 0)                              //8
-    (0 $lengthY 0)                                         //9 
-    project ($domain.xB $domain.yB 0) (cylinder)           //10	
-    project ($domain.xl2 $domain.yl2 0) (cylinder)         //11
-    project ($domain.xl1 $domain.yl1 0) (cylinder)         //12
-    project ($domain.xA $domain.yA 0) (cylinder)           //13
-    project ($domain.xD $domain.yD 0) (cylinder)           //14
-    project ($domain.xu1 $domain.yu1 0) (cylinder)         //15
-    project ($domain.xu2 $domain.yu2 0) (cylinder)         //16
-    project ($domain.xC $domain.yC 0) (cylinder)           //17
-     
-    (0 0 $thickness)                                            //18
-    ($domain.xl2o 0 $thickness)                                 //19
-    ($domain.xl1o 0 $thickness)                                 //20
-    ($domain.xAo 0 $thickness)                                  //21
-    ($lengthX 0 $thickness)                                     //22
-    ($lengthX $lengthY $thickness)                              //23
-    ($domain.xDo $lengthY $thickness)                           //24
-    ($domain.xu1o $lengthY $thickness)                          //25
-    ($domain.xu2o $lengthY $thickness)                          //26
-    (0 $lengthY $thickness)                                     //27
-    project ($domain.xB $domain.yB $thickness) (cylinder)       //28	
-    project ($domain.xl2 $domain.yl2 $thickness) (cylinder)     //29
-    project ($domain.xl1 $domain.yl1 $thickness) (cylinder)     //30
-    project ($domain.xA $domain.yA $thickness) (cylinder)       //31
-    project ($domain.xD $domain.yD $thickness) (cylinder)       //32
-    project ($domain.xu1 $domain.yu1 $thickness) (cylinder)     //33
-    project ($domain.xu2 $domain.yu2 $thickness) (cylinder)     //34
-    project ($domain.xC $domain.yC $thickness) (cylinder)       //35
-);
+
+vertices #codeStream
+{
+    codeInclude
+    #{
+        #include "pointField.H"
+    #};
+
+    code
+    #{
+        pointField points({
+            	/* 0 */ {0, 0, 0},
+            	/* 1 */ {$xl2o, 0, 0},
+            	/* 2 */ {$xl1o, 0, 0},
+            	/* 3 */ {$xAo, 0, 0},
+            	/* 4 */ {$lengthX, 0, 0},
+            	/* 5 */ {$lengthX, $lengthY, 0},
+            	/* 6 */ {$xDo, $lengthY, 0},
+            	/* 7 */ {$xu1o, $lengthY, 0},
+            	/* 8 */ {$xu2o, $lengthY, 0},
+            	/* 9 */ {0, $lengthY, 0},
+            	/* 10*/ {$xB, $yB, 0},
+            	/* 11*/ {$xl2, $yl2, 0},
+            	/* 12*/ {$xl1, $yl1, 0},
+            	/* 13*/ {$xA, $yA, 0},
+            	/* 14*/ {$xD, $yD, 0},
+            	/* 15*/ {$xu1, $yu1, 0},
+            	/* 16*/ {$xu2, $yu2, 0},
+            	/* 17*/ {$xC, $yC, 0}
+	 });
+	 
+        // Duplicate z points for thickness
+        const label sz = points.size();
+        points.resize(2*sz);
+        for (label i = 0; i < sz; ++i)
+        {
+            const point& pt = points[i];
+            points[i + sz] = point(pt.x(), pt.y(), $thickness);
+        }
+
+        os  << points;
+    #};
+};
 
 blocks
 (
-    hex (0 1 11 10 18 19 29 28) (20 20 1) simpleGrading (1 1 1)
+    hex (0 1 11 10 18 19 29 28) ($blocks $blocks 1) 
+    edgeGrading (0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 1 1 1 1)
     
-    hex (1 2 12 11 19 20 30 29) (20 20 1) simpleGrading (1 1 1)
+    hex (1 2 12 11 19 20 30 29) (15 $blocks 1) 
+    edgeGrading (1 1 1 1 0.2 0.2 0.2 0.2 1 1 1 1)
     
-    hex (2 3 13 12 20 21 31 30) (20 20 1) simpleGrading (1 1 1)
+    hex (2 3 13 12 20 21 31 30) ($blocks $blocks 1) 
+    edgeGrading (5 5 5 5 0.2 0.2 0.2 0.2 1 1 1 1)
     
-    hex (3 4 5 6 21 22 23 24) (20 20 1) simpleGrading (1 1 1)
+    hex (3 4 5 6 21 22 23 24) ($blocks2 $blocks 1) simpleGrading (1 1 1)
     
-    hex (3 6 14 13 21 24 32 31) (20 20 1) simpleGrading (1 1 1)
+    hex (3 6 14 13 21 24 32 31) ($blocks $blocks 1) 
+    edgeGrading (1 1 1 1 0.2 0.2 0.2 0.2 1 1 1 1)
     
-    hex (0 10 17 9 18 28 35 27) (20 20 1) simpleGrading (1 1 1)
+    hex (0 10 17 9 18 28 35 27) ($blocks $blocks 1) 
+    edgeGrading (0.2 0.2 0.2 0.2 1 1 1 1 1 1 1 1)
     
-    hex (9 17 16 8 27 35 34 26) (20 20 1) simpleGrading (1 1 1)
+    hex (9 17 16 8 27 35 34 26) ($blocks $blocks 1) 
+    edgeGrading (0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 1 1 1 1)
     
-    hex (7 8 16 15 25 26 34 33) (20 20 1) simpleGrading (1 1 1)
+    hex (7 8 16 15 25 26 34 33) (15 $blocks 1) 
+    edgeGrading (1 1 1 1 0.2 0.2 0.2 0.2 1 1 1 1)
     
-    hex (6 7 15 14 24 25 33 32) (20 20 1) simpleGrading (1 1 1)
+    hex (6 7 15 14 24 25 33 32) ($blocks $blocks 1) 
+    edgeGrading (0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 1 1 1 1)
 );
 
 edges
@@ -168,16 +176,33 @@ edges
     project 11 12 (cylinder)          // 
     project 29 30 (cylinder)          // 
     
+    //arc 11 12 ($domain.Ox $domain.arc1 0)
+    //arc 15 16 ($domain.Ox $domain.arc2 0)
+    //arc 29 30 ($domain.Ox $domain.arc1 $thickness)
+    //arc 33 34 ($domain.Ox $domain.arc2 $thickness)    
 );
 
 boundary
 (
-    /*top
+    jEt
     {
         type patch;
         faces
         (
-            (3 7 6 2)
+            (15 16 33 34)
+            (11 12 30 29)
+        );
+    }
+   
+    top
+    {
+        type patch;
+        faces
+        (
+            (9 8 27 26)
+            (5 6 23 24)
+            (6 7 24 25)
+            (7 8 25 26)
         );
     }
     bottom
@@ -185,7 +210,10 @@ boundary
         type patch;
         faces
         (
-            (1 5 4 0)
+            (0 1 18 19)
+            (1 2 19 20)
+            (2 3 20 21)
+            (3 4 21 22)
         );
     }
     inlet
@@ -193,7 +221,7 @@ boundary
         type patch;
         faces
         (
-            (0 4 7 3)
+            (0 9 27 18)
         );
     }
     outlet
@@ -201,7 +229,7 @@ boundary
         type patch;
         faces
         (
-            (2 6 5 1)
+            (4 5 22 23)
         );
     }
     back
@@ -209,7 +237,15 @@ boundary
         type empty;
         faces
         (
-            (0 3 2 1)
+            (26 27 35 34)
+            (25 26 33 34)
+            (24 25 33 32)
+            (21 24 31 32)
+            (21 22 23 24)
+            (20 21 31 30)
+            (19 20 30 29)
+            (18 19 29 28)
+            (18 28 35 27)
         );
     }
     front
@@ -217,9 +253,17 @@ boundary
         type empty;
         faces
         (
-            (4 5 6 7)
+            (3 4 5 6)
+            (0 1 11 10)
+            (1 2 12 11)
+            (2 3 13 12)
+            (3 6 14 13)
+            (0 10 17 9)
+            (6 7 15 14)
+            (7 8 16 15)
+            (8 9 17 16)
         );
-    }*/
+    }
 );
 
 mergePatchPairs
