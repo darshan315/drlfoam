@@ -44,7 +44,7 @@ boundaryField
         interval        20;
         train           true;
         seed            0;
-        absOmegaMax     5.0;
+        absQMax         5.0;
         value           uniform (0 0 0);
     }
 

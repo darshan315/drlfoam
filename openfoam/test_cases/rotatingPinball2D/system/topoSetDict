@@ -17,57 +17,35 @@ FoamFile
 actions
 (
    {
-        name          cylinder_a;
+        name          jet_upper;  //faces_upper_
         type          faceSet;
         action        new;
-        source        cylinderToFace;
-        p1            (-1.299 0 -1e3);
-        p2            (-1.299 0 1e3);
-        radius        0.5;
+        source        patchToFace;
+        patch 	      jEt_up;
     }
 
     {
-        name          cylinder_b;
+        name          jet_lower;
         type          faceSet;
         action        new;
-        source        cylinderToFace;
-        p1            (0 0.75 -1e3);
-        p2            (0 0.75 1e3);
-        radius        0.5;
+        source        patchToFace;
+        patch 	      jEt_lw;
     }
 
     {
-        name          cylinder_c;
-        type          faceSet;
-        action        new;
-        source        cylinderToFace;
-        p1            (0 -0.75 -1e3);
-        p2            (0 -0.75 1e3);
-        radius        0.5;
-    }
-
-    {
-        name    faceZone_a;
+        name    faceZone_upper;
         type    faceZoneSet;
         action  new;
         source  setToFaceZone;
-        faceSet cylinder_a;
+        faceSet jet_upper;
     }
 
     {
-        name    faceZone_b;
+        name    faceZone_lower;
         type    faceZoneSet;
         action  new;
         source  setToFaceZone;
-        faceSet cylinder_b;
-    }
-
-    {
-        name    faceZone_c;
-        type    faceZoneSet;
-        action  new;
-        source  setToFaceZone;
-        faceSet cylinder_c;
+        faceSet jet_lower;
     }
 
 );
