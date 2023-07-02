@@ -379,23 +379,31 @@ void Foam::pinballRotatingWallVelocityFvPatchVectorField::initializeCylinderSegm
     {
         scalar x = Cf.boundaryField()[patchID][faceI].x();
         scalar y = Cf.boundaryField()[patchID][faceI].y();
-    	
-    	o_y_ = origin_[1];
+    
+        scalar dist_a = sqrt(pow(x - origin_a_[0], 2) + pow(y - origin_a_[1], 2));
+        scalar dist_b = sqrt(pow(x - origin_b_[0], 2) + pow(y - origin_b_[1], 2));
+        scalar dist_c = sqrt(pow(x - origin_c_[0], 2) + pow(y - origin_c_[1], 2));
 
-        if (y < o_y_) //lower
+        if (dist_a < 1.2*radius)
         {
             centers_a_.append(Cf.boundaryField()[patchID][faceI]);
             normals_a_.append(Sf.boundaryField()[patchID][faceI]/magSf.boundaryField()[patchID][faceI]);
             faces_a_.append(faceI);
         }
 
-        if (y < o_y_) //upper
+        if (dist_b < 1.2*radius)
         {
             centers_b_.append(Cf.boundaryField()[patchID][faceI]);
             normals_b_.append(Sf.boundaryField()[patchID][faceI]/magSf.boundaryField()[patchID][faceI]);
             faces_b_.append(faceI);
         }
 
+        if (dist_c < 1.2*radius)
+        {
+            centers_c_.append(Cf.boundaryField()[patchID][faceI]);
+            normals_c_.append(Sf.boundaryField()[patchID][faceI]/magSf.boundaryField()[patchID][faceI]);
+            faces_c_.append(faceI);
+        }
     }
 
 }

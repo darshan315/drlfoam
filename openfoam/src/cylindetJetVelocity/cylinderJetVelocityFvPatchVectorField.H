@@ -24,7 +24,7 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::pinballRotatingWallVelocityFvPatchVectorField
+    Foam::cylinderJetVelocityFvPatchVectorField
 
 Group
     grpWallBoundaryConditions grpGenericBoundaryConditions
@@ -48,7 +48,7 @@ Usage
     \verbatim
     <patchName>
     {
-        type            pinballRotatingWallVelocity;
+        type            cylinderJetVelocity;
         origin_a        (1 0 0);
         origin_b        (0 1 0);
         origin_c        (0 -1 0);
@@ -64,7 +64,7 @@ See also
     Foam::fixedValueFvPatchField
 
 SourceFiles
-    pinballRotatingWallVelocityFvPatchVectorField.C
+    cylinderJetVelocityFvPatchVectorField.C
 
 \*---------------------------------------------------------------------------*/
 
@@ -82,10 +82,10 @@ namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-           Class pinballRotatingWallVelocityFvPatchVectorField Declaration
+           Class cylinderJetVelocityFvPatchVectorField Declaration
 \*---------------------------------------------------------------------------*/
 
-class pinballRotatingWallVelocityFvPatchVectorField
+class cylinderJetVelocityFvPatchVectorField
 :
     public fixedValueFvPatchVectorField
 {
@@ -144,17 +144,14 @@ class pinballRotatingWallVelocityFvPatchVectorField
 
         //- timeControls consistent with function objects
         Foam::timeControl control_;
-//****************************************************************
+        
         //- lists of face centers, normals, and face IDs
-        DynamicList <vector> centers_a_;
-        DynamicList <vector> centers_b_;
-        DynamicList <vector> centers_c_;
-        DynamicList <vector> normals_a_;
-        DynamicList <vector> normals_b_;
-        DynamicList <vector> normals_c_;
-        DynamicList <label> faces_a_;
-        DynamicList <label> faces_b_;
-        DynamicList <label> faces_c_;
+        DynamicList <vector> centers_upper_;
+        DynamicList <vector> centers_lower_;
+        DynamicList <vector> normals_upper_;
+        DynamicList <vector> normals_lower_;
+        DynamicList <label> faces_upper_;
+        DynamicList <label> faces_lower_;
 
 public:
 
@@ -179,7 +176,7 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given pinballRotatingWallVelocityFvPatchVectorField
+        //- Construct by mapping given cylinderJetVelocityFvPatchVectorField
         //  onto a new patch
         cylinderJetVelocityFvPatchVectorField
         (
@@ -205,7 +202,7 @@ public:
         }
 
         //- Construct as copy setting internal field reference
-        pinballRotatingWallVelocityFvPatchVectorField
+        cylinderJetVelocityFvPatchVectorField
         (
             const cylinderJetVelocityFvPatchVectorField&,
             const DimensionedField<vector, volMesh>&
@@ -246,7 +243,7 @@ public:
         Foam::timeControl initializeControl();
 
         //- determine attribution of patch faces to cylinders a/b/c
-        void initializeCylinderSegmentation();
+        void initializeJetSegmentation();
 };
 
 

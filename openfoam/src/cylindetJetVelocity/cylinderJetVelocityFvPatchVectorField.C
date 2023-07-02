@@ -37,12 +37,11 @@ Foam::cylinderJetVelocityFvPatchVectorField::
         const fvPatch &p,
         const DimensionedField<vector, volMesh> &iF)
     : fixedValueFvPatchField<vector>(p, iF),
-      origin(),
-      axis_(Zero),
+      origin_(),
       probes_(initializeProbes()),
       control_(initializeControl())
 {
-    initializeCylinderSegmentation();
+    initializeJetSegmentation();
 }
 
 Foam::cylinderJetVelocityFvPatchVectorField::
@@ -52,7 +51,6 @@ Foam::cylinderJetVelocityFvPatchVectorField::
         const dictionary &dict)
     : fixedValueFvPatchField<vector>(p, iF, dict, false),
       origin_(dict.get<vector>("origin_")),
-      axis_(dict.get<vector>("axis")),
       train_(dict.get<bool>("train")),
       policy_name_(dict.get<word>("policy")),
       policy_(torch::jit::load(policy_name_)),
@@ -69,7 +67,7 @@ Foam::cylinderJetVelocityFvPatchVectorField::
       probes_(initializeProbes()),
       control_(initializeControl())
 {
-    initializeCylinderSegmentation();
+    initializeJetSegmentation();
     updateCoeffs();
 }
 
@@ -82,7 +80,6 @@ Foam::cylinderJetVelocityFvPatchVectorField::
         const fvPatchFieldMapper &mapper)
     : fixedValueFvPatchField<vector>(ptf, p, iF, mapper),
       origin_(ptf.origin_),
-      axis_(ptf.axis_),
       train_(ptf.train_),
       policy_name_(ptf.policy_name_),
       policy_(ptf.policy_),
@@ -99,7 +96,7 @@ Foam::cylinderJetVelocityFvPatchVectorField::
       probes_(initializeProbes()),
       control_(initializeControl())
 {
-    initializeCylinderSegmentation();
+    initializeJetSegmentation();
 }
 
 Foam::cylinderJetVelocityFvPatchVectorField::
@@ -107,7 +104,6 @@ Foam::cylinderJetVelocityFvPatchVectorField::
         const cylinderJetVelocityFvPatchVectorField &rwvpvf)
     : fixedValueFvPatchField<vector>(rwvpvf),
       origin_(rwvpvf.origin_),
-      axis_(rwvpvf.axis_),
       train_(rwvpvf.train_),
       policy_name_(rwvpvf.policy_name_),
       policy_(rwvpvf.policy_),
@@ -124,7 +120,7 @@ Foam::cylinderJetVelocityFvPatchVectorField::
       probes_(initializeProbes()),
       control_(initializeControl())
 {
-    initializeCylinderSegmentation();
+    initializeJetSegmentation();
 }
 
 Foam::cylinderJetVelocityFvPatchVectorField::
@@ -133,7 +129,6 @@ Foam::cylinderJetVelocityFvPatchVectorField::
         const DimensionedField<vector, volMesh> &iF)
     : fixedValueFvPatchField<vector>(rwvpvf, iF),
       origin_(rwvpvf.origin_),
-      axis_(rwvpvf.axis_),
       train_(rwvpvf.train_),
       policy_name_(rwvpvf.policy_name_),
       policy_(rwvpvf.policy_),
@@ -150,7 +145,7 @@ Foam::cylinderJetVelocityFvPatchVectorField::
       probes_(initializeProbes()),
       control_(initializeControl())
 {
-    initializeCylinderSegmentation();
+    initializeJetSegmentation();
 }
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
@@ -161,7 +156,7 @@ void Foam::cylinderJetVelocityFvPatchVectorField::updateCoeffs()
     {
         return;
     }
-
+    
     // update angular velocities
     const scalar t = this->db().time().timeOutputValue();
     const scalar dt = this->db().time().deltaTValue();
@@ -170,21 +165,22 @@ void Foam::cylinderJetVelocityFvPatchVectorField::updateCoeffs()
     bool timeToControl = control_.execute() &&
                          t >= start_time_ - 0.5*dt &&
                          timeIndex != startTimeIndex;
-
+                         
     if (timeToControl && update_Q_)
     {
-        Q_old_upper_ = Q_upper_;
+    	Q_old_upper_ = Q_upper_;
         Q_old_lower_ = Q_lower_;
         control_time_ = t;
-
+        
         const volScalarField& p = this->db().lookupObject<volScalarField>("p"); 
         scalarField p_sample = probes_.sample(p);
 
-        if (Pstream::master()) // evaluate policy only on the master
+	if (Pstream::master()) // evaluate policy only on the master
         {
             torch::Tensor features = torch::from_blob(
                 p_sample.data(), {1, p_sample.size()}, torch::TensorOptions().dtype(torch::kFloat64)
             );
+            
             std::vector<torch::jit::IValue> policyFeatures{features};
             torch::Tensor dist_parameters = policy_.forward(policyFeatures).toTensor();
             scalar alpha_upper = dist_parameters[0][0].item<double>();
@@ -197,6 +193,7 @@ void Foam::cylinderJetVelocityFvPatchVectorField::updateCoeffs()
             std::gamma_distribution<double> distribution_2_b(beta_lower, 1.0);
             scalar Q_pre_scale_upper;
             scalar Q_pre_scale_lower;
+            
             if (train_)
             {
                 // sample from Beta distribution during training
@@ -221,47 +218,74 @@ void Foam::cylinderJetVelocityFvPatchVectorField::updateCoeffs()
             Info << "New Q_upper: " << Q_upper_ << "; old value: " << Q_old_upper_ << "\n";
             Info << "New Q_lower: " << Q_lower_ << "; old value: " << Q_old_lower_ << "\n";
         }
+        
         Pstream::scatter(Q_upper_);
         Pstream::scatter(Q_lower_);
         // avoid update of angular velocity during p-U coupling
         update_Q_ = false;
     }
-
+    
     // activate update of angular velocity after p-U coupling
     if (!timeToControl && !update_Q_)
     {
         update_Q_ = true;
     }
 
+    
     // update angular velocity by linear transition from old to new value
     scalar d_Q_upper = (Q_upper_ - Q_old_upper_) / dt_control_ * (t - control_time_);
     scalar Q_upper = Q_old_upper_ + d_Q_upper;
     scalar d_Q_lower = (Q_lower_ - Q_old_lower_) / dt_control_ * (t - control_time_);
     scalar Q_lower = Q_old_lower_ + d_Q_lower;
+    
     const int patch_size = (patch().Cf()).size();
     vectorField Up(patch_size);
+    
+    	//Applying velocity to the faces
+    	// 1. get velocity from Q -> Umax
+	// 		Umax : Q/area => Q/(thickness * 2*R*sin(jet_angle))
+    	// 2. parabolic velocity profile for jet
+    	//		vel_y = Umax * (1 - ((x-c)^2  / 2r^2)) 
+    	// 3. get c and r
+    	//		r : length of jet patch => 2*R_cylinder*sin(jet_angle)
+    	//		c : center of jet => centre of cylinder
+    	// 4. vector(0,vec_y,0)
+    
+    scalar thickness_ = 0.01;
+    scalar c_x = 0.2;
+    scalar jet_length = 0.00523359562429438327221186296090; //2*R_cylinder*sin(jet_angle);
+    scalar jet_area = thickness_ * jet_length;
+    //scalar Q_upper = 0.0003;
+        			
     forAll(faces_upper_, faceI)
     {
-        label faceuI = faces_a_[faceI];
-        Up[faceuUI] = (-Q_upper) * ((centers_upper_[faceI] - origin_) ^ (axis_ / mag(axis_)));
-        Up[faceUI] -= normals_upper_[faceI] * (normals_upper_[faceI] & Up[faceUI]);
+    	label faceUI = faces_upper_[faceI];
+	scalar U_max_up = Q_upper / jet_area;
+	scalar u_parabl_y_up = U_max_up*(1-((pow((centers_upper_[faceI].x() - c_x)/jet_length,2))/2));
+	Up[faceUI] = vector(0,u_parabl_y_up,0);
+    	
     }
+
     forAll(faces_lower_, faceI)
+    
     {
-        label faceLI = faces_lower_[faceI];
-        Up[faceLI] = (-Q_lower) * ((centers_lower_[faceI] - origin_) ^ (axis_ / mag(axis_)));
-        Up[faceLI] -= normals_lower_[faceI] * (normals_lower_[faceI] & Up[faceLI]);
+	label faceLI = faces_lower_[faceI];
+	scalar U_max_lw = Q_lower / jet_area;
+	scalar u_parabl_y_lw = U_max_lw*(1-((pow((centers_lower_[faceI].x() - c_x)/jet_length,2))/2));
+	Up[faceLI] = vector(0,-1*u_parabl_y_lw,0);
+    	
     }
 
     vectorField::operator=(Up);
     fixedValueFvPatchVectorField::updateCoeffs();
+    
 }
+
 
 void Foam::cylinderJetVelocityFvPatchVectorField::write(Ostream &os) const
 {
     fvPatchVectorField::write(os);
     os.writeEntry("origin_", origin_);
-    os.writeEntry("axis", axis_);
     os.writeEntry("policy", policy_name_);
     os.writeEntry("train", train_);
     os.writeEntry("absQMax", abs_Q_max_);
@@ -319,12 +343,12 @@ Foam::timeControl Foam::cylinderJetVelocityFvPatchVectorField::initializeControl
     return Foam::timeControl(this->db().time(), probesDict, "execute");
 }
 
-void Foam::cylinderJetVelocityFvPatchVectorField::initializeCylinderSegmentation()
+void Foam::cylinderJetVelocityFvPatchVectorField::initializeJetSegmentation()
 {
     const fvMesh& mesh(patch().boundaryMesh().mesh());
     // patch name and radius are currently hardcoded
     label patchID = mesh.boundaryMesh().findPatchID("cylinders");
-    scalar radius = 0.5;
+    //scalar radius = 0.5;
     const polyPatch& cPatch = mesh.boundaryMesh()[patchID];
     const surfaceScalarField& magSf = mesh.magSf();
     const surfaceVectorField& Cf = mesh.Cf();
@@ -332,23 +356,21 @@ void Foam::cylinderJetVelocityFvPatchVectorField::initializeCylinderSegmentation
 
     forAll(cPatch, faceI)
     {
-        scalar x = Cf.boundaryField()[patchID][faceI].x();
         scalar y = Cf.boundaryField()[patchID][faceI].y();
-    	
-    	o_y_ = origin_[1];
+    	scalar o_y_ = origin_[1];
 
         if (y < o_y_) //lower
         {
-            centers_a_.append(Cf.boundaryField()[patchID][faceI]);
-            normals_a_.append(Sf.boundaryField()[patchID][faceI]/magSf.boundaryField()[patchID][faceI]);
-            faces_a_.append(faceI);
+            centers_upper_.append(Cf.boundaryField()[patchID][faceI]);
+            normals_upper_.append(Sf.boundaryField()[patchID][faceI]/magSf.boundaryField()[patchID][faceI]);
+            faces_upper_.append(faceI);
         }
 
         if (y > o_y_) //upper
         {
-            centers_b_.append(Cf.boundaryField()[patchID][faceI]);
-            normals_b_.append(Sf.boundaryField()[patchID][faceI]/magSf.boundaryField()[patchID][faceI]);
-            faces_b_.append(faceI);
+            centers_lower_.append(Cf.boundaryField()[patchID][faceI]);
+            normals_lower_.append(Sf.boundaryField()[patchID][faceI]/magSf.boundaryField()[patchID][faceI]);
+            faces_lower_.append(faceI);
         }
 
     }
@@ -361,7 +383,7 @@ namespace Foam
 {
     makePatchTypeField(
         fvPatchVectorField,
-        pinballRotatingWallVelocityFvPatchVectorField);
+        cylinderJetVelocityFvPatchVectorField);
 }
 
 // ************************************************************************* //
