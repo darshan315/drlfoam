@@ -185,17 +185,24 @@ edges
 
 boundary
 (
-    jEt
+    jEt_up
     {
         type patch;
         faces
         (
             (15 16 33 34)
+        );
+    }
+    
+    jEt_lw
+    {
+        type patch;
+        faces
+        (
             (11 12 30 29)
         );
     }
     
-      
     cylinder
     {
     	type patch;

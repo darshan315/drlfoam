@@ -22,7 +22,7 @@ internalField   uniform ( 0 0 0 );
 
 boundaryField
 {
-    inlet // Note that the inlet patch consists of the boundary surface area at the inlet, top and bottom of the mesh
+    inlet
     {
         type            fixedValue;
         value           uniform (1 0 0);
@@ -30,27 +30,62 @@ boundaryField
 
     outlet
     {
-        type            inletOutlet;
-        inletValue      uniform (0 0 0);
-        value           $internalField;
+        type            zeroGradient;
     }
 
-    cylinder
+    jEt_up
+    {
+	type		codedFixedValue;
+	value		uniform (0 0.05 0);
+	
+	name		parabolic_Vel_u;
+	code
+	#{
+			const vectorField& Cf = patch().Cf();
+			vectorField& field = *this;
+			
+			const scalar c = 0.2;
+			const scalar r = 0.00523359562429438327221186296090;
+			const scalar Umax = 5;
+			
+			forAll(Cf, faceI)
+			{
+				const scalar x = Cf[faceI][0];
+				const scalar y = Cf[faceI][1];
+				
+				field[faceI] = vector (0,Umax*(1-(pow((x-c)/r,2))/2),0);
+			}
+	#};
+    }
+
+    jEt_lw
+        {
+	type		codedFixedValue;
+	value		uniform (0 0.05 0);
+	
+	name		parabolic_Vel_l;
+	code
+	#{
+			const vectorField& Cf = patch().Cf();
+			vectorField& field = *this;
+			
+			const scalar c = 0.2;
+			const scalar r = 0.00523359562429438327221186296090;
+			const scalar Umax = 5;
+			
+			forAll(Cf, faceI)
+			{
+				const scalar x = Cf[faceI][0];
+				const scalar y = Cf[faceI][1];
+				
+				field[faceI] = vector (0,-1*Umax*(1-(pow((x-c)/r,2))/2),0);
+			}
+	#};
+    }
+
+    "(cylinder|top|bottom)"
     {
         type            noSlip;
-    }
-
-    jET
-    {
-        type            cylinderJetVelocity;
-        origin_         (0.2 0.2 0.0);
-        axis            (0 0 1);
-        policy          "policy.pt";
-        probesDict      "probes";
-        train           true;
-        seed            0;
-        absQMax         5.0;
-        value           uniform (0 0 0);
     }
 
     "(front|back)"
